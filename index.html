@@ -3,86 +3,237 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Shopping List App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List | Minimal</title>
   <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 
 <body>
-  <div id="shopping-list">
-    <div class="header">
-      <h1>{{ header || 'Welcome' }}</h1>
-      <button v-if="editing" @click="doEdit(false)" class="btn btn-cancel">Cancel</button>
-      <button v-else @click="doEdit(true)" class="btn btn-primry">Add Item</button>
+  <div class="container">
+    <div id="todo-list">
+      <div class="app-header">
+        <div class="header-content">
+          <i class="fas fa-tasks header-icon"></i>
+          <h1>{{ header }}</h1>
+        </div>
+        <p class="subtitle">What's on your mind today?</p>
+      </div>
+      
+      <div class="stats-bar">
+        <div class="stat">
+          <span class="stat-number">{{ totalTasks }}</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number">{{ activeTasks }}</span>
+          <span class="stat-label">Active</span>
+        </div>
+        <div class="stat">
+          <span class="stat-number">{{ completedTasks }}</span>
+          <span class="stat-label">Done</span>
+        </div>
+      </div>
+      
+      <div class="filters">
+        <button 
+          @click="filter = 'all'"
+          :class="{active: filter === 'all'}"
+          class="filter-btn">
+          All
+        </button>
+        <button 
+          @click="filter = 'active'"
+          :class="{active: filter === 'active'}"
+          class="filter-btn">
+          Active
+        </button>
+        <button 
+          @click="filter = 'completed'}"
+          :class="{active: filter === 'completed'}"
+          class="filter-btn">
+          Completed
+        </button>
+      </div>
+      
+      <div v-if="editing" class="add-task-form">
+        <div class="form-header">
+          <h3>Add New Task</h3>
+          <button @click="doEdit(false)" class="close-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <input 
+          @keyup.enter="saveTask" 
+          type="text" 
+          v-model="newTask" 
+          placeholder="What needs to be done?"
+          class="task-input"
+          autofocus
+        >
+        <div class="form-options">
+          <label class="priority-option">
+            <input type="checkbox" v-model="newTaskHighPriority">
+            <span class="checkbox-custom">
+              <i class="fas fa-exclamation"></i>
+            </span>
+            <span>High Priority</span>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button 
+            @click="saveTask" 
+            :disabled="!newTask.trim()"
+            class="btn btn-save">
+            <i class="fas fa-plus"></i> Add Task
+          </button>
+        </div>
+      </div>
+      
+      <div class="tasks-container">
+        <p v-if="filteredTasks.length === 0" class="empty-state">
+          <i class="fas fa-inbox"></i>
+          <span v-if="filter === 'all'">No tasks yet. Add your first task!</span>
+          <span v-if="filter === 'active'">No active tasks. Great job!</span>
+          <span v-if="filter === 'completed'">No completed tasks yet.</span>
+        </p>
+        
+        <ul class="tasks-list">
+          <li 
+            v-for="task in filteredTasks" 
+            :key="task.id"
+            class="task-item"
+            :class="{
+              'completed': task.completed, 
+              'priority': task.highPriority
+            }"
+          >
+            <div class="task-checkbox" @click="toggleCompleted(task)">
+              <div class="checkbox" :class="{'checked': task.completed}">
+                <i v-if="task.completed" class="fas fa-check"></i>
+              </div>
+            </div>
+            
+            <div class="task-content" @click="toggleCompleted(task)">
+              <div class="task-label">
+                {{ task.label }}
+              </div>
+              <div class="task-meta">
+                <span v-if="task.highPriority" class="priority-badge">
+                  <i class="fas fa-exclamation-circle"></i> Priority
+                </span>
+                <span class="task-status">
+                  {{ task.completed ? 'Completed' : 'Pending' }}
+                </span>
+              </div>
+            </div>
+            
+            <button 
+              @click="deleteTask(task.id)"
+              class="delete-btn">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </li>
+        </ul>
+      </div>
+      
+      <div class="actions-bar">
+        <button 
+          v-if="!editing"
+          @click="doEdit(true)"
+          class="btn btn-add">
+          <i class="fas fa-plus-circle"></i> Add Task
+        </button>
+        
+        <div v-if="totalTasks > 0" class="actions-right">
+          <button 
+            v-if="completedTasks > 0"
+            @click="clearCompleted"
+            class="btn btn-clear">
+            <i class="fas fa-broom"></i> Clear Completed
+          </button>
+        </div>
+      </div>
     </div>
     
-    <div v-if="editing" class="add-item-form">
-      <input 
-        @keyup.enter="saveItem" 
-        type="text" v-model="newItem" placeholder = "Add an Item">
-      <label>
-        <input type="checkbox" v-model="newItemHighPriority">
-        High Priority
-      </label>
-      <button 
-        @click="saveItem" 
-        class="btn btn-primary">
-        Save Item
-      </button>
+    <div class="footer">
+      <p>Double-click task to mark as completed • Made with <i class="fas fa-heart"></i></p>
     </div>
-    <p v-if="items.length === 0">Nice job! You've bought all your items!</p>
-    <ul>
-      <li 
-        v-for="item in reversedItems" 
-        @click="togglePurchased(item)"
-        :key="item.id"
-        class="static-class"
-        :class="{strikeout: item.purchased, priority: item.highPriority}"
-      >
-        {{item.label}}
-      </li>
-    </ul>
   </div>
+  
   <script src="https://unpkg.com/vue@3"></script>
   <script>
-    const shoppingListApp = Vue.createApp({
+    const todoListApp = Vue.createApp({
       data() {
         return {
-          header: 'Shopping List App',
-          editing:false,
-          newItem: '',
-          newItemHighPriority: false,
-          items:[
-            {id: 1, label:'10 party hats', purchased: true, highPriority: false},
-            {id: 2, label:'2 board games', purchased: true, highPriority: false},
-            {id: 3, label:'20 cups', purchased: false, highPriority: true},
+          header: 'Todo List',
+          editing: false,
+          newTask: '',
+          newTaskHighPriority: false,
+          filter: 'all',
+          tasks: [
+            {id: 1, label: 'Learn Vue.js basics', completed: true, highPriority: true},
+            {id: 2, label: 'Create a todo list app', completed: true, highPriority: true},
+            {id: 3, label: 'Buy groceries for the week', completed: false, highPriority: true},
+            {id: 4, label: 'Call mom for her birthday', completed: false, highPriority: false},
+            {id: 5, label: 'Finish reading that book', completed: false, highPriority: false},
+            {id: 6, label: 'Plan weekend trip', completed: false, highPriority: false},
+            {id: 7, label: 'Organize workspace', completed: true, highPriority: false},
           ]
         }
       },
-      computed:{
-        reversedItems(){
-          return [...this.items].reverse()
+      computed: {
+        totalTasks() {
+          return this.tasks.length;
+        },
+        activeTasks() {
+          return this.tasks.filter(task => !task.completed).length;
+        },
+        completedTasks() {
+          return this.tasks.filter(task => task.completed).length;
+        },
+        filteredTasks() {
+          switch(this.filter) {
+            case 'active':
+              return this.tasks.filter(task => !task.completed);
+            case 'completed':
+              return this.tasks.filter(task => task.completed);
+            default:
+              return [...this.tasks];
+          }
         }
       },
-      methods:{
-        saveItem(){
-          this.items.push({
-            id:this.items.length + 1, 
-            label: this.newItem,
-            highPriority: this.newItemHighPriority
-          })
-          this.newItem = ""
-          this.newItemHighPriority = false
+      methods: {
+        saveTask() {
+          if (this.newTask.trim() === '') return;
+          
+          this.tasks.unshift({
+            id: Date.now(),
+            label: this.newTask,
+            completed: false,
+            highPriority: this.newTaskHighPriority
+          });
+          
+          this.newTask = "";
+          this.newTaskHighPriority = false;
+          this.editing = false;
         },
-        doEdit(editing){
-          this.editing = editing
-          this.newItem = ""
-          this.newItemHighPriority = false
+        doEdit(editing) {
+          this.editing = editing;
+          this.newTask = "";
+          this.newTaskHighPriority = false;
         },
-        togglePurchased(item){
-          item.purchased = !item.purchased
+        toggleCompleted(task) {
+          task.completed = !task.completed;
+        },
+        deleteTask(taskId) {
+          this.tasks = this.tasks.filter(task => task.id !== taskId);
+        },
+        clearCompleted() {
+          this.tasks = this.tasks.filter(task => !task.completed);
         }
       }
-    }).mount('#shopping-list')
+    }).mount('#todo-list')
   </script>
 </body>
 
